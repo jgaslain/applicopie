@@ -282,7 +282,7 @@ public class MainApplication extends Application {
 
 	private void enregistrer() {
 		if (this.saisie.getText() != null && !"".equals(this.saisie.getText())) {
-			String nomDuFichier = new SimpleDateFormat("yyyy-MM-dd_HH'h'mm").format(new Date()) + "_" + this.prenom.replaceAll("[^a-zA-Z0-9]", "_") + "_" + this.selectionnerTexte.getSelectionModel().getSelectedItem().getTitre().replaceAll("[^a-zA-Z0-9]", "_") + ".txt";
+			String nomDuFichier = "ENREGISTREMENTS/" + new SimpleDateFormat("yyyy-MM-dd_HH'h'mm").format(new Date()) + "_" + this.prenom.replaceAll("[^a-zA-Z0-9]", "_") + "_" + this.selectionnerTexte.getSelectionModel().getSelectedItem().getTitre().replaceAll("[^a-zA-Z0-9]", "_") + ".txt";
 			System.out.println("Enregistrement de " + nomDuFichier);
 			try {
 				FileWriter fw = new FileWriter(nomDuFichier);

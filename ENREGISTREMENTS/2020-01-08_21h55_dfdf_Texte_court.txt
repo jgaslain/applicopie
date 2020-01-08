@@ -1,0 +1,11 @@
+
+Texte d'origine : 
+
+Ceci est un texte court.
+
+
+
+Texte saisi : 
+
+Ceci est un texte courss.
+
