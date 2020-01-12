@@ -5,6 +5,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -12,6 +13,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Properties;
 
+import javafx.animation.Animation;
+import javafx.animation.Interpolator;
+import javafx.animation.Transition;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.beans.value.ChangeListener;
@@ -19,6 +23,7 @@ import javafx.beans.value.ObservableValue;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.event.ActionEvent;
+import javafx.event.Event;
 import javafx.event.EventHandler;
 import javafx.geometry.Insets;
 import javafx.scene.Group;
@@ -39,13 +44,16 @@ import javafx.scene.text.Text;
 import javafx.scene.text.TextFlow;
 import javafx.stage.Stage;
 import javafx.stage.WindowEvent;
+import javafx.util.Duration;
 
 public class MainApplication extends Application {
 	
 	private static final double DEFAULT_FONT_SIZE = 20;
 	private static final String DEFAULT_FONT = "Verdana";
-	boolean stop = false;
-	private List<Text> lettres;
+	private static final String PROPERTIES_FILE = "config.ini";
+	private static final String REPERTOIRE_TEXTES = "TEXTES";
+	boolean stop = true;
+	private List<Text> mots;
 	private boolean effacerTexte = false;
 	private VBox vbox;
 	private ComboBox<Texte> selectionnerTexte;
@@ -86,7 +94,7 @@ public class MainApplication extends Application {
             	commencer.setDisable(true);
             	afficherTexte();
             	afficherSaisie();
-				effacerTexte = true;
+//				effacerTexte = true;
             }
         });
         grid.add(commencer,  2,  0);
@@ -108,8 +116,6 @@ public class MainApplication extends Application {
 		        System.exit(0);
 			}
 		});
-		
-		demarrerThread();
 		
 		root.setDisable(true);
 		
@@ -138,7 +144,7 @@ public class MainApplication extends Application {
 
 		try {
 
-			input = new FileInputStream("config.ini");
+			input = new FileInputStream(PROPERTIES_FILE);
 			prop.load(input);
 			if (prop.getProperty("vitesse") != null) {
 				coefficientVitesse = Integer.parseInt(prop.getProperty("vitesse"));
@@ -162,20 +168,26 @@ public class MainApplication extends Application {
 		saisie.setFont(Font.font(DEFAULT_FONT, DEFAULT_FONT_SIZE));
         saisie.setWrapText(true);
         saisie.setPrefRowCount(10);
+        saisie.setOnKeyPressed(new EventHandler<Event>() {
+			@Override
+			public void handle(Event event) {
+				demarrerThread();
+			}
+		});
 		vbox.getChildren().add(saisie);
 	}
 
 	private void afficherTexte() {
     	// Initialiser texte et démarrer thread
-		lettres = new ArrayList<>();
+		mots = new ArrayList<>();
 		TextFlow layout = new TextFlow();
 		layout.setPadding(new Insets(40, 10, 10, 10));
 		layout.setMaxWidth(900);
         vbox.getChildren().add(layout);
-		for (char caractere : selectionnerTexte.getSelectionModel().getSelectedItem().getCorps().toCharArray()) {
-			Text lettre = new Text("" + caractere);
+		for (String mot : selectionnerTexte.getSelectionModel().getSelectedItem().getCorps().split(" ")) {
+			Text lettre = new Text(mot + " ");
 			lettre.setFont(Font.font(DEFAULT_FONT, DEFAULT_FONT_SIZE));
-			lettres.add(lettre);
+			mots.add(lettre);
 			layout.getChildren().add(lettre);
 		}
 	}
@@ -193,7 +205,7 @@ public class MainApplication extends Application {
 	private ObservableList<Texte> lireFichiers() {
 		
     	ObservableList<Texte> list = FXCollections.observableArrayList();
-    	String nomRepertoire = "TEXTES";
+    	String nomRepertoire = REPERTOIRE_TEXTES;
 		File repertoire = new File(nomRepertoire);
 		String liste[] = repertoire.list();
 		if (liste != null) {
@@ -202,7 +214,7 @@ public class MainApplication extends Application {
 					String titre = null;
 					StringBuffer corps = new StringBuffer();
 					InputStream flux = new FileInputStream(nomRepertoire + "/" + liste[i]);
-					InputStreamReader lecture = new InputStreamReader(flux);
+					InputStreamReader lecture = new InputStreamReader(flux, StandardCharsets.UTF_8);
 					BufferedReader buff = new BufferedReader(lecture);
 					String ligne = buff.readLine();
 					if (ligne != null) {
@@ -224,41 +236,59 @@ public class MainApplication extends Application {
     	return list;
 	}
 
-	protected void demarrerThread() {
-		new Thread() {
-        	
-			@Override
-			public void run() {
-				try {
-					while(!stop) {
-						sleep(1000);
-						if (effacerTexte) {
-							sleep(5000);
-							for (Text lettre : lettres) {
-								Platform.runLater(new Runnable() {
-									@Override
-									public void run() {
-										lettre.setFill(Color.WHITE);
+	protected synchronized void demarrerThread() {
+		if (stop == true) {
+			System.out.println("Démarrage du thread");
+			stop = false;
+			new Thread() {
+	        	
+				@Override
+				public void run() {
+					try {
+						while(!stop) {
+//							if (effacerTexte) {
+								sleep(2000);
+								for (Text mot : mots) {
+									Platform.runLater(new Runnable() {
+										@Override
+										public void run() {
+											
+											final Animation animation = new Transition() {
+
+									            {
+									                setCycleDuration(Duration.millis(3000));
+									                setInterpolator(Interpolator.EASE_OUT);
+									            }
+
+									            @Override
+									            protected void interpolate(double frac) {
+									                Color vColor = new Color(0, 0, 0, 1 - frac);
+									                mot.setFill(vColor);
+									            }
+									        };
+									        animation.play();
+											
+										}
+									});
+									sleep(20000 / coefficientVitesse);
+									if (stop) {
+										break;
 									}
-								});
-								sleep(20000 / coefficientVitesse);
-								if (stop) {
-									break;
 								}
-							}
-							// Tout le texte est effacé
-							sleep(5000);
-							enregistrer();
-							afficherQuitterOuRecommencer();
-							effacerTexte = false;
+								// Tout le texte est effacé
+								sleep(5000);
+								enregistrer();
+								afficherQuitterOuRecommencer();
+//								effacerTexte = false;
+//							}
 						}
+					} catch (InterruptedException e) {
+						e.printStackTrace();
 					}
-				} catch (InterruptedException e) {
-					e.printStackTrace();
 				}
-			}
-        	
-        }.start();
+	        	
+	        }.start();
+		}
 	}
 
 	protected void afficherQuitterOuRecommencer() {
