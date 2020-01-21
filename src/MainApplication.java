@@ -54,20 +54,20 @@ public class MainApplication extends Application {
 	private static final String REPERTOIRE_TEXTES = "TEXTES";
 	boolean stop = true;
 	private List<Text> mots;
-	private boolean effacerTexte = false;
 	private VBox vbox;
 	private ComboBox<Texte> selectionnerTexte;
 	private String prenom;
 	private Alert alert;
 	private TextArea saisie;
 	private Stage stage;
-	private int coefficientVitesse = 30;
+	private int vitesse = 30;
+	private int vitesseEffacement = 1000;
 
 	@Override
 	public void start(Stage stage) throws Exception {
 		chargerProprietes();
 		this.stage = stage;
-		this.stage.setTitle("Test d'écriture");
+		this.stage.setTitle("Applicopie");
 		initStage(true);
 	}
 	
@@ -86,15 +86,12 @@ public class MainApplication extends Application {
         initialiserSelectionText();
         grid.add(selectionnerTexte, 1, 0);
         
-        this.effacerTexte = false;
-        
         Button commencer = new Button("Commencer");
         commencer.setOnAction(new EventHandler<ActionEvent>() {
             @Override public void handle(ActionEvent e) {
             	commencer.setDisable(true);
             	afficherTexte();
             	afficherSaisie();
-//				effacerTexte = true;
             }
         });
         grid.add(commencer,  2,  0);
@@ -147,7 +144,10 @@ public class MainApplication extends Application {
 			input = new FileInputStream(PROPERTIES_FILE);
 			prop.load(input);
 			if (prop.getProperty("vitesse") != null) {
-				coefficientVitesse = Integer.parseInt(prop.getProperty("vitesse"));
+				vitesse = Integer.parseInt(prop.getProperty("vitesse"));
+			}
+			if (prop.getProperty("vitesse-effacement") != null) {
+				vitesseEffacement  = Integer.parseInt(prop.getProperty("vitesse-effacement"));
 			}
 
 		} catch (final IOException ex) {
@@ -246,41 +246,38 @@ public class MainApplication extends Application {
 				public void run() {
 					try {
 						while(!stop) {
-//							if (effacerTexte) {
-								sleep(2000);
-								for (Text mot : mots) {
-									Platform.runLater(new Runnable() {
-										@Override
-										public void run() {
-											
-											final Animation animation = new Transition() {
+							sleep(2000);
+							for (Text mot : mots) {
+								Platform.runLater(new Runnable() {
+									@Override
+									public void run() {
+										
+										final Animation animation = new Transition() {
 
-									            {
-									                setCycleDuration(Duration.millis(3000));
-									                setInterpolator(Interpolator.EASE_OUT);
-									            }
+								            {
+								                setCycleDuration(Duration.millis(5 * vitesseEffacement + mot.getText().length() * vitesseEffacement));
+								                setInterpolator(Interpolator.EASE_OUT);
+								            }
 
-									            @Override
-									            protected void interpolate(double frac) {
-									                Color vColor = new Color(0, 0, 0, 1 - frac);
-									                mot.setFill(vColor);
-									            }
-									        };
-									        animation.play();
-											
-										}
-									});
-									sleep(20000 / coefficientVitesse);
-									if (stop) {
-										break;
+								            @Override
+								            protected void interpolate(double frac) {
+								                Color vColor = new Color(0, 0, 0, 1 - frac);
+								                mot.setFill(vColor);
+								            }
+								        };
+								        animation.play();
+										
 									}
+								});
+								sleep(50000 / vitesse);
+								if (stop) {
+									break;
 								}
-								// Tout le texte est effacé
-								sleep(5000);
-								enregistrer();
-								afficherQuitterOuRecommencer();
-//								effacerTexte = false;
-//							}
+							}
+							// Tout le texte est effacé
+							sleep(5000);
+							enregistrer();
+							afficherQuitterOuRecommencer();
 						}
 					} catch (InterruptedException e) {
 						e.printStackTrace();
